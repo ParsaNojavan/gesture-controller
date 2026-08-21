@@ -6,6 +6,11 @@ import cv2
 from gesture_controller.camera.webcam import Webcam
 from gesture_controller.hand_tracking.drawing import draw_hand_landmarks
 from gesture_controller.hand_tracking.tracker import HandTracker
+from gesture_controller.gestures.models import GestureMode
+from gesture_controller.gestures.recognizer import GestureRecognizer
+from gesture_controller.hand_tracking.landmarks import (
+    landmarks_to_points,
+)
 
 
 WINDOW_NAME = "Gesture System Controller"
@@ -19,6 +24,8 @@ def main() -> None:
 
     start_time = time.perf_counter()
     last_frame_time = start_time
+
+    gesture_recognizer = GestureRecognizer()
     
     try:
         with (Webcam(
@@ -46,8 +53,13 @@ def main() -> None:
                     timestamp_ms=timestamp_ms,
                 )
 
+                gesture_mode = GestureMode.NONE
+
                 if detection_result.hands:
                     first_hand = detection_result.hands[0]
+
+                    points = landmarks_to_points(first_hand)
+                    gesture_mode = gesture_recognizer.recognize(points)
 
                     draw_hand_landmarks(
                         frame,
@@ -55,13 +67,25 @@ def main() -> None:
                         show_indices=True,
                     )
 
+                    if gesture_mode == GestureMode.VOLUME:
+                        gesture_text = "MODE: VOLUME"
+                        gesture_color = (255, 100, 0)
+
+                    elif gesture_mode == GestureMode.BRIGHTNESS:
+                        gesture_text = "MODE: BRIGHTNESS"
+                        gesture_color = (0, 255, 255)
+
+                    else:
+                        gesture_text = "MODE: INACTIVE"
+                        gesture_color = (0, 0, 255)
+
                     cv2.putText(
                         frame,
-                        "Hand detected",
+                        gesture_text,
                         (30, 50),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.8,
-                        (0, 255, 0),
+                        gesture_color,
                         2,
                     )
                 else:
@@ -77,15 +101,15 @@ def main() -> None:
                     
                 last_frame_time = time.perf_counter()
 
-                cv2.putText(
-                    frame,
-                    "Webcam is working",
-                    (30, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0, 255, 0),
-                    2,
-                )
+                # cv2.putText(
+                #     frame,
+                #     "Webcam is working",
+                #     (30, 50),
+                #     cv2.FONT_HERSHEY_SIMPLEX,
+                #     1,
+                #     (0, 255, 0),
+                #     2,
+                # )
 
                 cv2.putText(
                     frame,
