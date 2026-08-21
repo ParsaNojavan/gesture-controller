@@ -32,6 +32,10 @@ PINKY_PIP = 18
 PINKY_DIP = 19
 PINKY_TIP = 20
 
+THUMB_TIP = 4
+INDEX_TIP = 8
+MIDDLE_TIP = 12
+
 
 @dataclass(frozen=True)
 class Point2D:
@@ -119,3 +123,26 @@ def get_finger_states(
             margin,
         ),
     )
+
+def clamp(value: float, minimum: float, maximum: float) -> float:
+    return max(minimum, min(value, maximum))
+
+def map_distance_to_percentage(
+    distance: float,
+    minimum_distance: float = 0.03,
+    maximum_distance: float = 0.30,
+) -> float:
+    
+    if maximum_distance <= minimum_distance:
+        raise ValueError(
+            "maximum_distance must be greater than minimum_distance"
+        )
+
+    normalized = (
+        (distance - minimum_distance)
+        / (maximum_distance - minimum_distance)
+    )
+
+    normalized = clamp(normalized, 0.0, 1.0)
+
+    return normalized * 100.0
