@@ -11,6 +11,12 @@ from gesture_controller.gestures.recognizer import GestureRecognizer
 from gesture_controller.hand_tracking.landmarks import (
     landmarks_to_points,
 )
+from gesture_controller.hand_tracking.landmarks import (
+    THUMB_TIP, INDEX_TIP, MIDDLE_TIP,
+    distance_between, landmarks_to_points,
+    map_distance_to_percentage,
+)
+from gesture_controller.utils.smoothing import ValueSmoother
 
 
 WINDOW_NAME = "Gesture System Controller"
@@ -26,6 +32,8 @@ def main() -> None:
     last_frame_time = start_time
 
     gesture_recognizer = GestureRecognizer()
+    volume_smoother = ValueSmoother(alpha=0.25)
+    brightness_smoother = ValueSmoother(alpha=0.25)
     
     try:
         with (Webcam(
@@ -54,12 +62,35 @@ def main() -> None:
                 )
 
                 gesture_mode = GestureMode.NONE
+                percentage = None
 
                 if detection_result.hands:
                     first_hand = detection_result.hands[0]
 
                     points = landmarks_to_points(first_hand)
                     gesture_mode = gesture_recognizer.recognize(points)
+
+                    percentage: float | None = None
+
+                    if gesture_mode == GestureMode.VOLUME:
+                        distance = distance_between(
+                            points,
+                            first_index=THUMB_TIP,
+                            second_index=MIDDLE_TIP
+                        )
+
+                        raw_percentage = map_distance_to_percentage(distance)
+                        percentage = volume_smoother.update(raw_percentage)
+
+                    elif gesture_mode == GestureMode.BRIGHTNESS:
+                        distance = distance_between(
+                            points,
+                            first_index=THUMB_TIP,
+                            second_index=INDEX_TIP
+                        )
+
+                        raw_percentage = map_distance_to_percentage(distance)
+                        percentage = brightness_smoother.update(raw_percentage)
 
                     draw_hand_landmarks(
                         frame,
@@ -88,6 +119,20 @@ def main() -> None:
                         gesture_color,
                         2,
                     )
+
+                    if percentage is not None:
+                        percentage_text = f"VALUE: {percentage:.0f}%"
+
+                        cv2.putText(
+                            frame,
+                            percentage_text,
+                            (30, 85),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.8,
+                            gesture_color,
+                            2,
+                        )
+
                 else:
                     cv2.putText(
                         frame,
