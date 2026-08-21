@@ -17,6 +17,13 @@ from gesture_controller.hand_tracking.landmarks import (
     map_distance_to_percentage,
 )
 from gesture_controller.utils.smoothing import ValueSmoother
+from gesture_controller.controllers.brightness import (
+    BrightnessController,
+)
+from gesture_controller.controllers.audio import (
+    VolumeController,
+)
+from gesture_controller.utils.change_filter import ChangeFilter
 
 
 WINDOW_NAME = "Gesture System Controller"
@@ -34,6 +41,13 @@ def main() -> None:
     gesture_recognizer = GestureRecognizer()
     volume_smoother = ValueSmoother(alpha=0.25)
     brightness_smoother = ValueSmoother(alpha=0.25)
+
+    volume_controller = VolumeController()
+    brightness_controller = BrightnessController()
+
+    volume_change_filter = ChangeFilter(minimum_change=1.0)
+    brightness_change_filter = ChangeFilter(minimum_change=1.0)
+
     
     try:
         with (Webcam(
@@ -82,6 +96,9 @@ def main() -> None:
                         raw_percentage = map_distance_to_percentage(distance)
                         percentage = volume_smoother.update(raw_percentage)
 
+                        if volume_change_filter.should_update(percentage):
+                            volume_controller.set_percentage(percentage)
+
                     elif gesture_mode == GestureMode.BRIGHTNESS:
                         distance = distance_between(
                             points,
@@ -91,6 +108,9 @@ def main() -> None:
 
                         raw_percentage = map_distance_to_percentage(distance)
                         percentage = brightness_smoother.update(raw_percentage)
+
+                        if brightness_change_filter.should_update(percentage):
+                            brightness_controller.set_percentage(percentage)
 
                     draw_hand_landmarks(
                         frame,
