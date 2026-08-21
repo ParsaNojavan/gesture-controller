@@ -21,4 +21,4 @@ Control system volume and screen brightness using hand gestures and a webcam.
 
 ## Development Status
 
-🚧 Work in progress.
+🐧 tested on Arch Linux
